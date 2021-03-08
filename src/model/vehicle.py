@@ -1,4 +1,4 @@
-from src.const import section, CAPACITY_KEY, MAX_DIST_KEY
+from src.const import CAPACITY_KEY, MAX_DIST_KEY
 
 
 class Vehicle:
@@ -6,6 +6,6 @@ class Vehicle:
     capacity = 0
     dist = 0
 
-    def __init__(self):
+    def __init__(self, section):
         self.maxDist = section[MAX_DIST_KEY]
         self.capacity = section[CAPACITY_KEY]

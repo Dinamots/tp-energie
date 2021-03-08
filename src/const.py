@@ -1,15 +1,12 @@
-import configparser
-
-DATASET = "/lyon_40_1_1"
-DATA_PREFIX = "../resources/data"
-DATA_PATH = DATA_PREFIX + DATASET
-INIT_FILE_PATH = DATA_PATH + "/vehicle.ini"
-VEHICLE_SECTION = "Vehicle"
 
 # Config
-config = configparser.ConfigParser()
-config.read(INIT_FILE_PATH)
-section = config[VEHICLE_SECTION]
+DATA_PREFIX = "../resources/data"
+INI_FILE = "/vehicle.ini"
+DISTANCE_FILE = "/distances.txt"
+TIMES_FILE = "/times.txt"
+VISITS_FILE = "/visits.csv"
+VEHICLE_SECTION = "Vehicle"
+
 
 # Keys
 MAX_DIST_KEY = "max_dist"
