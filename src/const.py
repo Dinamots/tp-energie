@@ -1,9 +1,9 @@
 import configparser
 
-DATASET = "lyon_40_1_1"
+DATASET = "/lyon_40_1_1"
 DATA_PREFIX = "../resources/data"
 DATA_PATH = DATA_PREFIX + DATASET
-INIT_FILE_PATH = DATA_PATH + "/init.ini"
+INIT_FILE_PATH = DATA_PATH + "/vehicle.ini"
 VEHICLE_SECTION = "Vehicle"
 
 # Config
