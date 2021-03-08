@@ -14,7 +14,7 @@ class Visit:
         visit = Visit()
         position = Position(float(line[2]), float(line[3]))
 
-        visit.id = line[0]
+        visit.id = int(line[0])
         visit.name = line[1]
         visit.position = position
         visit.demand = int(line[4])
