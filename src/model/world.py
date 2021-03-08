@@ -17,35 +17,34 @@ class World:
     visits: list[Visit] = list()
     travels: list[Travel] = list()
 
-    def initVisits(self, visits: list, line):
-        visits.append(Visit.build(line))
-        return visits
-
     def getCsv(self):
         reader = csv.reader(open(self.path + VISITS_FILE))
         next(reader)
         return reader
 
-    def initTravel(self, travels: list, start: Visit, end: Visit):
-        distance = self.distances[start.id][end.id]
-        time = self.times[start.id][end.id]
-        travels.append(Travel(start, end, distance, time))
-        return travels
-
     def initTravels(self, travels: list, visits: list, start: Visit):
         visits = visits[visits.index(start) + 1:]
-        return travels + reduce(lambda ts, end: self.initTravel(ts, start, end), visits, list())
+        createTravel = lambda end: Travel(
+            start,
+            end,
+            self.distances[start.id][end.id],
+            self.times[start.id][end.id]
+        )
+        return travels + list(map(
+            createTravel,
+            visits
+        ))
 
     def __init__(self, path: str):
         self.path = path
         self.initConfig()
         self.distances: np.ndarray = np.genfromtxt(path + DISTANCE_FILE, dtype=float)
         self.times: np.ndarray = np.genfromtxt(path + TIMES_FILE, dtype=float)
-        self.visits = reduce(
-            lambda visits, line: self.initVisits(visits, line),
-            list(self.getCsv()),
-            list()
-        )
+        self.visits = list(map(
+            lambda line: Visit.build(line),
+            list(self.getCsv())
+        ))
+
         self.travels = reduce(
             lambda travels, start: self.initTravels(travels, self.visits, start),
             self.visits,
