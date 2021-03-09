@@ -7,7 +7,8 @@ class Visit:
     name = ""
     demand = 0
     duration = 0
-    done = False
+    isDone = False
+    isChargeStation = False
 
     @staticmethod
     def build(line: str):
@@ -18,6 +19,8 @@ class Visit:
         visit.name = line[1]
         visit.position = position
         visit.demand = int(line[4])
-
         visit.duration = (visit.demand * 10) + (60 * 5)
+        visit.isChargeStation = visit.name[0] != 'V'
+        visit.isDone = visit.demand == 0
+
         return visit
