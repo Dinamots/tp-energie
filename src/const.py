@@ -16,3 +16,6 @@ CHARGE_MEDIUM_KEY = "charge_medium"
 CHARGE_SLOW_KEY = "charge_slow"
 START_TIME_KEY = "start_time"
 END_TIME_KEY = "end_time"
+
+# Dates
+DATE_FORMAT = "%H:%M"

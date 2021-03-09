@@ -1,5 +1,5 @@
 import os
-from src.model.world import World
+from src.world import World
 
 if __name__ == '__main__':
     dataPath = os.path.realpath(os.path.join(os.getcwd(), "../", "resources", "data"))

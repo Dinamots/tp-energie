@@ -18,7 +18,7 @@ class World:
     times: np.ndarray = None
     visits: list[Visit] = None
     travels: list[list[Travel]] = None
-    vehicle: Vehicle = None
+    vehicles: list[Vehicle] = None
     charge: int = None
     tour: list[Visit] = None
 
@@ -29,12 +29,14 @@ class World:
 
     def initTravels(self, travels: list, visits: list, start: Visit):
         # visits = visits[visits.index(start) + 1:]
-        createTravel = lambda end: Travel(
-            start,
-            end,
-            self.distances[start.id][end.id],
-            self.times[start.id][end.id]
-        )
+        def createTravel(end) -> Travel:
+            return Travel(
+                start,
+                end,
+                self.distances[start.id][end.id],
+                self.times[start.id][end.id]
+            )
+
         return travels + [list(map(
             createTravel,
             visits
@@ -44,7 +46,7 @@ class World:
         print('Start : ', path)
         self.path = path
         self.initConfig()
-        self.charge = self.section[CHARGE_FAST_KEY]
+        self.charge = int(self.section[CHARGE_FAST_KEY])
         self.distances: np.ndarray = np.genfromtxt(path + DISTANCE_FILE, dtype=float)
         self.times: np.ndarray = np.genfromtxt(path + TIMES_FILE, dtype=float)
         self.visits = list(map(
@@ -58,7 +60,7 @@ class World:
             list()
         )
         self.tour = list()
-        self.vehicle = Vehicle(self.section)
+        self.vehicles = list()
         self.start()
 
     def initConfig(self):
@@ -69,19 +71,11 @@ class World:
     def allDone(self):
         return next((visit for visit in self.visits if not visit.isDone), None) is None
 
-    def getNearestTravel(self, visit: Visit):
-        nearestTravels = self.travels[visit.id]
-        nearestTravels.sort(key=lambda travel: travel.distance)
-        return next((travel for travel in nearestTravels if not self.visits[travel.end.id].isDone), None)
-
     def getStart(self):
         return next(visit for visit in self.visits if visit.name == 'Depot')
 
     def start(self):
-        start = self.getStart()
+        self.vehicles.append(Vehicle(self.section, self.getStart()))
         while not self.allDone():
-            self.tour.append(start)
-            travel = self.getNearestTravel(start)
-            self.visits[travel.end.id].isDone = True
-            start = travel.end
-        self.tour.append(start)
+            for vehicle in self.vehicles:
+                vehicle.move(self.visits, self.travels)
