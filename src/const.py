@@ -5,6 +5,7 @@ INI_FILE = "/vehicle.ini"
 DISTANCE_FILE = "/distances.txt"
 TIMES_FILE = "/times.txt"
 VISITS_FILE = "/visits.csv"
+OUT_FILE = "/out.txt"
 VEHICLE_SECTION = "Vehicle"
 
 

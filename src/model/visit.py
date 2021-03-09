@@ -2,16 +2,18 @@ from src.model.position import Position
 
 
 class Visit:
-    id = 0
+    id: int = None
     position: Position
-    name = ""
-    demand = 0
-    duration = 0
+    name = None
+    demand = None
+    duration = None
     isDone = False
     isChargeStation = False
+    isDepot = False
+    chargeTime = None
 
     @staticmethod
-    def build(line: str):
+    def build(line: str, chargeTime: int):
         visit = Visit()
         position = Position(float(line[2]), float(line[3]))
 
@@ -22,5 +24,7 @@ class Visit:
         visit.duration = (visit.demand * 10) + (60 * 5)
         visit.isChargeStation = visit.name[0] != 'V'
         visit.isDone = visit.demand == 0
+        visit.isDepot = visit.name == "Depot"
+        visit.chargeTime = chargeTime
 
         return visit
