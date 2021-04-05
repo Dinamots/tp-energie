@@ -1,3 +1,4 @@
+from src.model.travelType import TravelType
 from src.model.visit import Visit
 
 

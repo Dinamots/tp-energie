@@ -1,8 +1,10 @@
 from collections import Callable
+from copy import deepcopy
 from datetime import datetime
 
 from src.const import CAPACITY_KEY, MAX_DIST_KEY, START_TIME_KEY, END_TIME_KEY
 from src.model.travel import Travel
+from src.model.travelType import TravelType
 from src.model.visit import Visit
 
 
@@ -56,7 +58,9 @@ class Vehicle:
 
     def getNearestTravelUsable(self, start: Visit, visits: list[Visit], travels: list[list[Travel]]):
         return self.findNearestInTravels(
-            start, travels, lambda travel:
+            start,
+            travels,
+            lambda travel:
             not visits[travel.end.id].isDone
             and self.isEnableToGoToChargeStation(travel, visits, travels)
             and self.haveEnougthTime(travel)
@@ -80,29 +84,34 @@ class Vehicle:
 
     def move(self, visits: list[Visit], travels: list[list[Travel]]):
         travel = self.getNearestTravelUsable(self.currentVisit, visits, travels)
+        travelType = TravelType.TRAVEL
         if not travel and (self.nbOutOfBags >= self.nbOutOfCharge):
             travel = self.getNearestDeposit(travels)
+            travelType = travelType.DEPOSIT
             self.bags = self.capacity
             self.remainingTime -= 60 * 10
         elif not travel:
             travel = self.getNearestChargeStation(travels)
+            travelType = travelType.CHARGE
             self.dist = 0
             self.remainingTime -= travel.end.chargeTime
 
         visits[travel.end.id].isDone = True
-        self.onTravel(travel)
+        self.onTravel(travel, travelType)
 
-    def onTravel(self, travel):
+    def onTravel(self, travel, travelType):
         self.currentVisit = travel.end
         self.dist += travel.distance
         self.bags -= travel.end.demand
         self.remainingTime -= travel.time
         self.nbOutOfBags = 0
         self.nbOutOfCharge = 0
-        self.tour.append(travel.end)
+        visit = deepcopy(travel.end)
+        visit.travelType = travelType
+        self.tour.append(visit)
 
     def goToDeposit(self, travels: list[list[Travel]]):
-        self.onTravel(self.getNearestDeposit(travels))
+        self.onTravel(self.getNearestDeposit(travels), TravelType.TRAVEL)
 
     def getNearestDeposit(self, travels):
         return self.findNearestInTravels(self.currentVisit, travels, lambda travel: travel.end.isDepot)

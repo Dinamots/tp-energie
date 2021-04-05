@@ -23,7 +23,7 @@ class World:
     vehicles: list[Vehicle] = None
     charge: int = None
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, nbVehicles):
         print('Start : ', path)
         self.path = path
         self.initConfig()
@@ -40,7 +40,8 @@ class World:
             self.visits,
             list()
         )
-        self.vehicles = list()
+
+        self.vehicles = [Vehicle(self.section, self.getStart()) for _ in range(nbVehicles)]
         self.start()
         self.write()
 
@@ -75,9 +76,6 @@ class World:
         return next(visit for visit in self.visits if visit.name == 'Depot')
 
     def start(self):
-        self.vehicles.append(Vehicle(self.section, self.getStart()))
-        self.vehicles.append(Vehicle(self.section, self.getStart()))
-
         while not self.allDone() and not self.allOutOfTime():
             for vehicle in self.vehicles:
                 vehicle.move(self.visits, self.travels)
@@ -91,26 +89,9 @@ class World:
     def allOutOfTime(self):
         return next((vehicle for vehicle in self.vehicles if vehicle.remainingTime > 0), None) is None
 
-    def flatten(self, l):
-        if not isinstance(l, Iterable):
-            return l
-
-        for el in l:
-            if isinstance(el, Iterable) and not isinstance(el, (str, bytes)):
-                yield from self.flatten(el)
-            else:
-                yield el
-
     def write(self):
         file: IO = open(self.path + OUT_FILE, 'w')
-        turns = list(map(lambda vehicle: list(map(lambda visit: visit.id, vehicle.tour)), self.vehicles))
-
-        def zipTour(acc, tour) -> list[list[int]]:
-            tupleList = list(zip(acc, cycle(tour))) if len(acc) > len(tour) else list(zip(cycle(acc), tour))
-            return tupleList if len(tupleList) else tour
-
-        turnsTuple = list(reduce(zipTour, turns, list()))
-        turnsTuple = list(map(lambda t: list(self.flatten(t)), turnsTuple)) if len(self.vehicles) > 1 else turnsTuple
-        for turn in turnsTuple:
-            turnString = ','.join([str(integer) for integer in turn]) if len(self.vehicles) > 1 else str(turn)
+        turns = list(map(lambda vehicle: list(map(lambda visit: visit.formatVisit(), vehicle.tour)), self.vehicles))
+        for turn in turns:
+            turnString = ','.join(elem for elem in turn)
             file.write(turnString + '\n')
