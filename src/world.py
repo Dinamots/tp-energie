@@ -5,8 +5,8 @@ from typing import IO
 
 import numpy as np
 
-from src.const import VEHICLE_SECTION, INI_FILE, DISTANCE_FILE, TIMES_FILE, VISITS_FILE, CHARGE_FAST_KEY, OUT_FILE, \
-    CHARGE_SLOW_KEY, CHARGE_MEDIUM_KEY
+from src.const import VEHICLE_SECTION, INI_FILE, DISTANCE_FILE, TIMES_FILE, VISITS_FILE, OUT_FILE, \
+    CHARGE_SLOW_KEY
 from src.model.travel import Travel
 from src.model.vehicle import Vehicle
 from src.model.visit import Visit
@@ -90,7 +90,9 @@ class World:
 
     def write(self):
         file: IO = open(self.path + OUT_FILE, 'w')
-        turns = list(map(lambda vehicle: list(map(lambda visit: visit.formatVisit(), vehicle.tour)), self.vehicles))
+        turns = list(
+            map(lambda vehicle: list(map(lambda travel: travel.formatTravel(), vehicle.tour)), self.vehicles)
+        )
         for turn in turns:
             turnString = ','.join(elem for elem in turn)
             file.write(turnString + '\n')

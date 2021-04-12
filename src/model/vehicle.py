@@ -14,7 +14,7 @@ class Vehicle:
     dist: float = 0
     bags: int = 0
     remainingTime = 0
-    tour: list[Visit] = None
+    tour: list[Travel] = None
     currentVisit: Visit = None
     nbOutOfTime = 0
     nbOutOfCharge = 0
@@ -27,7 +27,6 @@ class Vehicle:
         startTime = float(datetime.strptime(section[START_TIME_KEY], "%H:%M").hour)
         endTime = float(datetime.strptime(section[END_TIME_KEY], "%H:%M").hour)
         self.currentVisit = start
-        self.tour.append(start)
         self.bags = self.capacity
         self.remainingTime = (endTime - startTime) * 3600
 
@@ -123,9 +122,9 @@ class Vehicle:
         self.remainingTime -= travel.time + self.deliveryTime(travel.end.demand)
         self.nbOutOfBags = 0
         self.nbOutOfCharge = 0
-        visit = deepcopy(travel.end)
-        visit.travelType = travelType
-        self.tour.append(visit)
+        trvl = deepcopy(travel)
+        trvl.travelType = travelType
+        self.tour.append(trvl)
 
     def deliveryTime(self, nbBags: int):
         return (5 * 60) + (nbBags * 10)
