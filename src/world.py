@@ -1,13 +1,12 @@
 import configparser
 import csv
-from collections.abc import Iterable
 from functools import reduce
-from itertools import cycle
 from typing import IO
 
 import numpy as np
 
-from src.const import VEHICLE_SECTION, INI_FILE, DISTANCE_FILE, TIMES_FILE, VISITS_FILE, CHARGE_FAST_KEY, OUT_FILE
+from src.const import VEHICLE_SECTION, INI_FILE, DISTANCE_FILE, TIMES_FILE, VISITS_FILE, CHARGE_FAST_KEY, OUT_FILE, \
+    CHARGE_SLOW_KEY, CHARGE_MEDIUM_KEY
 from src.model.travel import Travel
 from src.model.vehicle import Vehicle
 from src.model.visit import Visit
@@ -24,14 +23,14 @@ class World:
     charge: int = None
 
     def __init__(self, path: str, nbVehicles):
-        print('Start : ', path)
+        print('Start : ', path, ' nbVehicles: ', nbVehicles)
         self.path = path
         self.initConfig()
-        self.charge = int(self.section[CHARGE_FAST_KEY])
+        self.charge = int(self.section[CHARGE_SLOW_KEY]) * 60
         self.distances: np.ndarray = np.genfromtxt(path + DISTANCE_FILE, dtype=float)
         self.times: np.ndarray = np.genfromtxt(path + TIMES_FILE, dtype=float)
         self.visits = list(map(
-            lambda line: Visit.build(line, int(self.section[CHARGE_FAST_KEY])),
+            lambda line: Visit.build(line, self.charge),
             list(self.getCsv())
         ))
 

@@ -37,20 +37,32 @@ class Vehicle:
         return nearestTravels
 
     def isEnableToGoToChargeStation(self, travel: Travel, visits: list[Visit], travels: list[list[Travel]]):
-        enableToGoToChargeStation = (
-                                            self.dist +
-                                            travel.distance +
-                                            self.getNearestChargePlace(travel.end, visits, travels).distance
-                                    ) <= self.maxDist
-        if not enableToGoToChargeStation:
+        chargeTravel = self.getNearestChargePlace(travel.end, visits, travels)
+        haveEnoughCharge = (
+                                   self.dist +
+                                   travel.distance +
+                                   chargeTravel.distance
+                           ) <= self.maxDist
+
+        haveEnoughTime = (
+                                 self.remainingTime -
+                                 travel.time
+                         ) > 0
+
+        if not haveEnoughCharge:
             self.nbOutOfCharge += 1
             return False
+
+        if not haveEnoughTime:
+            self.nbOutOfTime += 1
+            return False
+
         return True
 
-    def haveEnougthTime(self, travel: Travel):
-        return (self.remainingTime - travel.time) >= 0
+    def haveEnoughTime(self, travel: Travel, travels: list[list[Travel]]):
+        return (self.remainingTime - (travel.time + self.getNearestDeposit(travels, travel.end).time)) >= 0
 
-    def haveEnoughtBags(self, travel: Travel):
+    def haveEnoughBags(self, travel: Travel):
         if not (self.bags - travel.end.demand >= 0):
             self.nbOutOfBags += 1
             return False
@@ -63,8 +75,8 @@ class Vehicle:
             lambda travel:
             not visits[travel.end.id].isDone
             and self.isEnableToGoToChargeStation(travel, visits, travels)
-            and self.haveEnougthTime(travel)
-            and self.haveEnoughtBags(travel)
+            and self.haveEnoughTime(travel, travels)
+            and self.haveEnoughBags(travel)
         )
 
     def getNearestChargePlace(self, start: Visit, visits: list[Visit], travels: list[list[Travel]]):
@@ -83,10 +95,14 @@ class Vehicle:
         return visit.isChargeStation
 
     def move(self, visits: list[Visit], travels: list[list[Travel]]):
+        if self.remainingTime > 0 and self.outOfTime(travels):
+            self.remainingTime = 0
+            return
+
         travel = self.getNearestTravelUsable(self.currentVisit, visits, travels)
         travelType = TravelType.TRAVEL
         if not travel and (self.nbOutOfBags >= self.nbOutOfCharge):
-            travel = self.getNearestDeposit(travels)
+            travel = self.getNearestDeposit(travels, self.currentVisit)
             travelType = travelType.DEPOSIT
             self.bags = self.capacity
             self.remainingTime -= 60 * 10
@@ -101,20 +117,28 @@ class Vehicle:
 
     def onTravel(self, travel, travelType):
         self.currentVisit = travel.end
-        self.dist += travel.distance
+        if travelType != TravelType.CHARGE:
+            self.dist += travel.distance
         self.bags -= travel.end.demand
-        self.remainingTime -= travel.time
+        self.remainingTime -= travel.time + self.deliveryTime(travel.end.demand)
         self.nbOutOfBags = 0
         self.nbOutOfCharge = 0
         visit = deepcopy(travel.end)
         visit.travelType = travelType
         self.tour.append(visit)
 
-    def goToDeposit(self, travels: list[list[Travel]]):
-        self.onTravel(self.getNearestDeposit(travels), TravelType.TRAVEL)
+    def deliveryTime(self, nbBags: int):
+        return (5 * 60) + (nbBags * 10)
 
-    def getNearestDeposit(self, travels):
-        return self.findNearestInTravels(self.currentVisit, travels, lambda travel: travel.end.isDepot)
+    def goToDeposit(self, travels: list[list[Travel]]):
+        self.onTravel(self.getNearestDeposit(travels, self.currentVisit), TravelType.TRAVEL)
+
+    def getNearestDeposit(self, travels: list[list[Travel]], start: Visit):
+        return self.findNearestInTravels(start, travels, lambda travel: travel.end.isDepot)
 
     def getNearestChargeStation(self, travels):
         return self.findNearestInTravels(self.currentVisit, travels, lambda travel: travel.end.isChargeStation)
+
+    def outOfTime(self, travels: list[list[Travel]]):
+        trvls: list[Travel] = travels[self.currentVisit.id]
+        return next((travel for travel in trvls if self.haveEnoughTime(travel, travels)), None) is None
