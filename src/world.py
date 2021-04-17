@@ -1,5 +1,6 @@
 import configparser
 import csv
+from copy import deepcopy
 from functools import reduce
 from typing import IO
 
@@ -10,6 +11,8 @@ from src.const import VEHICLE_SECTION, INI_FILE, DISTANCE_FILE, TIMES_FILE, VISI
 from src.model.travel import Travel
 from src.model.vehicle import Vehicle
 from src.model.visit import Visit
+from src.model.worldScore import WorldScore
+from src.utils import Utils
 
 
 class World:
@@ -22,8 +25,9 @@ class World:
     vehicles: list[Vehicle] = None
     charge: int = None
 
-    def __init__(self, path: str, nbVehicles):
-        print('Start : ', path, ' nbVehicles: ', nbVehicles)
+    def __init__(self, path: str = None, nbVehicles=None):
+        if path is None and nbVehicles is None:
+            return
         self.path = path
         self.initConfig()
         self.charge = int(self.section[CHARGE_SLOW_KEY]) * 60
@@ -42,7 +46,21 @@ class World:
 
         self.vehicles = [Vehicle(self.section, self.getStart()) for _ in range(nbVehicles)]
         self.start()
-        self.write()
+        self.write(OUT_FILE)
+
+    @staticmethod
+    def fromWorld(world):
+        newWorld = World()
+        newWorld.path = world.path
+        newWorld.vehicles = world.vehicles[:]
+        newWorld.section = world.section
+        newWorld.charge = world.charge
+        newWorld.distances: np.ndarray = world.distances
+        newWorld.times: np.ndarray = world.times
+        newWorld.visits = world.visits
+        newWorld.travels = world.travels
+
+        return newWorld
 
     def getCsv(self):
         reader = csv.reader(open(self.path + VISITS_FILE))
@@ -75,10 +93,10 @@ class World:
         return next(visit for visit in self.visits if visit.name == 'Depot')
 
     def start(self):
+        print('Start : ', self.path, ' nbVehicles: ', len(self.vehicles))
         while not self.allDone() and not self.allOutOfTime():
             for vehicle in self.vehicles:
                 vehicle.move(self.visits, self.travels)
-
         self.allVehiclesToDeposit()
 
     def allVehiclesToDeposit(self):
@@ -88,11 +106,30 @@ class World:
     def allOutOfTime(self):
         return next((vehicle for vehicle in self.vehicles if vehicle.remainingTime > 0), None) is None
 
-    def write(self):
-        file: IO = open(self.path + OUT_FILE, 'w')
+    def write(self, name: str):
+        file: IO = open(self.path + name, 'w')
         turns = list(
             map(lambda vehicle: list(map(lambda travel: travel.formatTravel(), vehicle.tour)), self.vehicles)
         )
         for turn in turns:
             turnString = ','.join(elem for elem in turn)
             file.write(turnString + '\n')
+
+    def isWorldValid(self):
+        return next((vehicle for vehicle in self.vehicles if not vehicle.isTourValid()), True) is True
+
+    def getWorldScore(self):
+        return WorldScore(len(self.vehicles), self.getVehiclesDistances()) if self.isWorldValid() else None
+
+    def getVehiclesDistances(self):
+        return reduce(lambda acc, vehicle: acc + vehicle.getVehicleTotalDist(), self.vehicles, 0)
+
+    def isBetter(self, world):
+        compareScore: WorldScore = world.getWorldScore()
+        score = self.getWorldScore()
+        if compareScore is None:
+            return True
+
+        return (score.nbVehicles == compareScore.nbVehicles and score.dist <= compareScore.dist) or \
+               score.nbVehicles < compareScore.nbVehicles
+
