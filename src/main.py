@@ -39,12 +39,11 @@ def getDirectories(dataPath: str):
 def main():
     directories = getDirectories(dataPath)
     start = time()
-    world = MultiProcessing.run(createWorld, directories)
+    worlds = MultiProcessing.run(createWorld, directories)
     print("Create Worlds time: {}mins\n".format((time() - start) / 60))
     print("Create Worlds time: {}secs\n".format((time() - start)))
-    print(world)
     start = time()
-    print(getOptimalsSwap(world))
+    getOptimalsSwap(worlds)
     print("Get Optimals time: {}mins\n".format((time() - start) / 60))
     print("Get Optimals time: {}secs\n".format((time() - start)))
 
