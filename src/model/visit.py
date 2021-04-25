@@ -12,7 +12,6 @@ class Visit:
     isChargeStation = False
     isDepot = False
     chargeTime = None
-    travelType = TravelType.TRAVEL
 
     @staticmethod
     def build(line: str, chargeTime: int):
@@ -30,12 +29,3 @@ class Visit:
         visit.chargeTime = chargeTime
 
         return visit
-
-    def formatVisit(self):
-        switcher = {
-            self.travelType.TRAVEL: str(self.id),
-            self.travelType.CHARGE: 'R',
-            self.travelType.DEPOSIT: 'C'
-        }
-
-        return switcher.get(self.travelType, str(self.id))
