@@ -2,6 +2,7 @@ from collections import Callable
 from copy import deepcopy
 from datetime import datetime
 from functools import reduce
+from random import shuffle
 
 from src.const import CAPACITY_KEY, MAX_DIST_KEY, START_TIME_KEY, END_TIME_KEY
 from src.model.travel import Travel
@@ -21,8 +22,9 @@ class Vehicle:
     nbOutOfTime = 0
     nbOutOfCharge = 0
     nbOutOfBags = 0
+    random = False
 
-    def __init__(self, section=None, start: Visit = None):
+    def __init__(self, section=None, start: Visit = None, random: bool = False):
         if section is None or start is None:
             return
 
@@ -35,6 +37,7 @@ class Vehicle:
         self.bags = self.capacity
         self.time = (endTime - startTime) * 3600
         self.remainingTime = self.time
+        self.random = random
 
     @staticmethod
     def fromVehicle(vehicle):
@@ -46,11 +49,17 @@ class Vehicle:
         newVehicle.maxDist = vehicle.maxDist
         newVehicle.capacity = vehicle.capacity
         newVehicle.currentVisit = vehicle.currentVisit
+        newVehicle.random = vehicle.random
 
-    def getTravelsFromStart(self, start: Visit, travels: list[list[Travel]]):
+    def getNearestTravelsFromStart(self, start: Visit, travels: list[list[Travel]]):
         nearestTravels = travels[start.id]
         nearestTravels.sort(key=lambda travel: travel.distance)
         return nearestTravels
+
+    def getRandomTravelsFromStart(self, start: Visit, travels: list[list[Travel]]):
+        trvls = travels[start.id]
+        shuffle(trvls)
+        return trvls
 
     def isEnableToGoToChargeStation(self, travel: Travel, visits: list[Visit], travels: list[list[Travel]]):
         chargeTravel = self.getNearestChargePlace(travel.end, visits, travels)
@@ -84,24 +93,35 @@ class Vehicle:
             return False
         return True
 
+    def isTravelUsable(self, travel: Travel, visits: list[Visit], travels: list[list[Travel]]):
+        return not visits[travel.end.id].isDone \
+               and self.isEnableToGoToChargeStation(travel, visits, travels) \
+               and self.haveEnoughTime(travel, travels) \
+               and self.haveEnoughBags(travel)
+
+    def travelUsable(self, visits: list[Visit], travels: list[list[Travel]], l: list[Travel]):
+        return self.findInList(l, lambda travel: self.isTravelUsable(travel, visits, travels))
+
     def getNearestTravelUsable(self, start: Visit, visits: list[Visit], travels: list[list[Travel]]):
-        return self.findNearestInTravels(
-            start,
-            travels,
-            lambda travel:
-            not visits[travel.end.id].isDone
-            and self.isEnableToGoToChargeStation(travel, visits, travels)
-            and self.haveEnoughTime(travel, travels)
-            and self.haveEnoughBags(travel)
-        )
+        return self.travelUsable(visits, travels, self.getNearestTravelsFromStart(start, travels))
+
+    def getRandomTravelUsable(self, start: Visit, visits: list[Visit], travels: list[list[Travel]]):
+        return self.travelUsable(visits, travels, self.getRandomTravelsFromStart(start, travels))
 
     def getNearestChargePlace(self, start: Visit, visits: list[Visit], travels: list[list[Travel]]):
-        return self.findNearestInTravels(start, travels, lambda travel: self.isChargeStation(visits[travel.end.id]))
+        return self.findInList(
+            self.getNearestTravelsFromStart(start, travels),
+            lambda travel: self.isChargeStation(visits[travel.end.id])
+        )
 
-    def findNearestInTravels(self, start: Visit, travels: list[list[Travel]], predicate: Callable[[Travel], bool]):
+    def findInList(
+            self,
+            l: list[Travel],
+            predicate: Callable[[Travel], bool]
+    ):
         return next(
             (
-                travel for travel in self.getTravelsFromStart(start, travels)
+                travel for travel in l
                 if predicate(travel)
             ),
             None
@@ -115,7 +135,10 @@ class Vehicle:
             self.remainingTime = 0
             return
 
-        travel = self.getNearestTravelUsable(self.currentVisit, visits, travels)
+        travel = self.getRandomTravelUsable(self.currentVisit, visits, travels) \
+            if self.random \
+            else self.getNearestTravelUsable(self.currentVisit, visits, travels)
+
         travelType = TravelType.TRAVEL
         if not travel and (self.nbOutOfBags >= self.nbOutOfCharge):
             travel = self.getNearestDeposit(travels, self.currentVisit)
@@ -150,10 +173,16 @@ class Vehicle:
         self.onTravel(self.getNearestDeposit(travels, self.currentVisit), TravelType.TRAVEL)
 
     def getNearestDeposit(self, travels: list[list[Travel]], start: Visit):
-        return self.findNearestInTravels(start, travels, lambda travel: travel.end.isDepot)
+        return self.findInList(
+            self.getNearestTravelsFromStart(start, travels),
+            lambda travel: travel.end.isDepot
+        )
 
     def getNearestChargeStation(self, travels):
-        return self.findNearestInTravels(self.currentVisit, travels, lambda travel: travel.end.isChargeStation)
+        return self.findInList(
+            self.getNearestTravelsFromStart(self.currentVisit, travels),
+            lambda travel: travel.end.isChargeStation
+        )
 
     def outOfTime(self, travels: list[list[Travel]]):
         trvls: list[Travel] = travels[self.currentVisit.id]

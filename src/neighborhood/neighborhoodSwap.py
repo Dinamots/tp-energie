@@ -7,14 +7,14 @@ from src.utils import Utils
 from src.world import World
 
 
-class NeighborhoodSwap:
+class NeighborhoodSwap():
     world: World = None
 
     def __init__(self, world):
         self.world = world
 
     def create(self):
-        print("Create Optimal : " + self.world.path)
+        print("Create Optimal Swap: " + self.world.path)
         return reduce(
             lambda currentWorld, world: world if not currentWorld.isBetter(world) else currentWorld,
             self.getNeighborhood(),
