@@ -1,13 +1,12 @@
 import configparser
 import csv
-from copy import deepcopy
 from functools import reduce
 from typing import IO
 
 import numpy as np
 
 from src.const import VEHICLE_SECTION, INI_FILE, DISTANCE_FILE, TIMES_FILE, VISITS_FILE, OUT_FILE, \
-    CHARGE_SLOW_KEY
+    CHARGE_SLOW_KEY, CHARGE_MEDIUM_KEY, CHARGE_FAST_KEY
 from src.model.travel import Travel
 from src.model.vehicle import Vehicle
 from src.model.visit import Visit
@@ -25,11 +24,11 @@ class World:
     vehicles: list[Vehicle] = None
     charge: int = None
 
-    def __init__(self, path: str = None, nbVehicles=None):
+    def __init__(self, path: str = None, nbVehicles=None, random=False):
         if path is None and nbVehicles is None:
             return
         self.path = path
-        self.initConfig()
+        self.section = Utils.getSection(path + INI_FILE, VEHICLE_SECTION)
         self.charge = int(self.section[CHARGE_SLOW_KEY]) * 60
         self.distances: np.ndarray = np.genfromtxt(path + DISTANCE_FILE, dtype=float)
         self.times: np.ndarray = np.genfromtxt(path + TIMES_FILE, dtype=float)
@@ -44,9 +43,10 @@ class World:
             list()
         )
 
-        self.vehicles = [Vehicle(self.section, self.getStart()) for _ in range(nbVehicles)]
+        self.vehicles = [Vehicle(self.section, self.getStart(), random) for _ in range(nbVehicles)]
         self.start()
-        self.write(OUT_FILE)
+        if self.allDone():
+            self.write(OUT_FILE)
 
     @staticmethod
     def fromWorld(world):
@@ -80,11 +80,6 @@ class World:
             createTravel,
             visits
         ))]
-
-    def initConfig(self):
-        config = configparser.ConfigParser()
-        config.read(self.path + INI_FILE)
-        self.section = config[VEHICLE_SECTION]
 
     def allDone(self):
         return next((visit for visit in self.visits if not visit.isDone), None) is None
@@ -132,4 +127,3 @@ class World:
 
         return (score.nbVehicles == compareScore.nbVehicles and score.dist <= compareScore.dist) or \
                score.nbVehicles < compareScore.nbVehicles
-
